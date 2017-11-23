@@ -203,9 +203,9 @@ while True:
             # new connection, data from the server socket
             sockfd, addr = server_socket.accept()
             SOCKET_LIST.append(sockfd)
-            sys.stdout.write("Client (%s, %s) connected\n" % addr)
+            print 'Client (%s, %s) connected' % addr
             data = sockfd.recv(1024)
-            sys.stdout.write('Received data from him, it\'s alright\n')
+            print 'Received data from him, it\'s alright'
             name = find_in_data(data, 'name')
             team_temp = find_in_data(data, 'team')
             if team_temp == 1:
