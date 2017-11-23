@@ -205,12 +205,12 @@ while True:
             SOCKET_LIST.append(sockfd)
             print 'Client (%s, %s) connected' % addr
             data = sockfd.recv(1024)
-            print 'Received data from him, it\'s alright'
+            print 'Received data from him: {}'.format(data)
             name = find_in_data(data, 'name')
             team_temp = find_in_data(data, 'team')
-            if team_temp == 1:
+            if team_temp == '1':
                 team = TEAM_ONE_COLOR
-            elif team_temp == 2:
+            elif team_temp == '2':
                 team = TEAM_TWO_COLOR
             else:
                 # Doesn't care which team he is on, we'll place him on the one with fewer players. If equal - he will side with the starters.
@@ -247,53 +247,63 @@ while True:
                         req = find_in_data(data, 'req')
                         if player_by_sock(sock).role == 'guesser':
                             if player_by_sock(sock).color == CURR_TURN:
-                                # received a word
-                                i, j = find_in_matrix(req.lower())
-                                sys.stdout.write('Received a word request from %s. The word is %s, i is %s and j is %s\n' % (player_by_sock(sock).name, req, i, j))
-                                sys.stdout.flush()
-                                if i == -1:
-                                    # if it's not a real word
-                                    broadcast([sock], DEFAULT_MSG % ('Server', 'Please enter a valid word.'))
-                                else:
-                                    # a valid input (word from the grid)
-                                    if hasattr(MATRIX[i][j], 'visible'):
-                                        broadcast([sock], DEFAULT_MSG % ('Server', 'This word is already open, genius.'))
+                                if req.strip() == '':
+                                    prev = CURR_TURN
+                                    # wants to end his turn
+                                    if CURR_TURN == TEAM_ONE_COLOR:
+                                        CURR_TURN = TEAM_TWO_COLOR + '_s'
                                     else:
-                                        MATRIX[i][j].visible = True
-                                        # msg = 'colorreveal&i=%s&j=%s&color=%s&revealer=%s' % (str(i), str(j), MATRIX[i][j].color, player_by_sock(sock).name)
-                                        # broadcast([i.conn for i in PLAYERS_LIST if i.role == 'guesser'], msg)
-                                        # msg = 'colorreveal&i=%s&j=%s&color=%s&revealer=%s' % (str(i), str(j), HIDDEN_COLOR, player_by_sock(sock).name)
-                                        # broadcast([i.conn for i in PLAYERS_LIST if i.role == 'spymaster'], msg)
-                                        CLUES_LEFT -= 1
+                                        CURR_TURN = TEAM_ONE_COLOR + '_s'
+                                    msg = 'turnend&turn={}&prev={}'.format(CURR_TURN, prev)
+                                    broadcast([i.conn for i in PLAYERS_LIST], msg)
+                                else:
+                                    # received a word
+                                    i, j = find_in_matrix(req.lower())
+                                    sys.stdout.write('Received a word request from %s. The word is %s, i is %s and j is %s\n' % (player_by_sock(sock).name, req, i, j))
+                                    sys.stdout.flush()
+                                    if i == -1:
+                                        # if it's not a real word
+                                        broadcast([sock], DEFAULT_MSG % ('Server', 'Please enter a valid word.'))
+                                    else:
+                                        # a valid input (word from the grid)
+                                        if hasattr(MATRIX[i][j], 'visible'):
+                                            broadcast([sock], DEFAULT_MSG % ('Server', 'This word is already open, genius.'))
+                                        else:
+                                            MATRIX[i][j].visible = True
+                                            # msg = 'colorreveal&i=%s&j=%s&color=%s&revealer=%s' % (str(i), str(j), MATRIX[i][j].color, player_by_sock(sock).name)
+                                            # broadcast([i.conn for i in PLAYERS_LIST if i.role == 'guesser'], msg)
+                                            # msg = 'colorreveal&i=%s&j=%s&color=%s&revealer=%s' % (str(i), str(j), HIDDEN_COLOR, player_by_sock(sock).name)
+                                            # broadcast([i.conn for i in PLAYERS_LIST if i.role == 'spymaster'], msg)
+                                            CLUES_LEFT -= 1
 
-                                        # substract from counter
-                                        if MATRIX[i][j].color == TEAM_ONE_COLOR:
-                                            TEAM_ONE_LEFT -= 1
-                                        elif MATRIX[i][j].color == TEAM_TWO_COLOR:
-                                            TEAM_TWO_LEFT -= 1
+                                            # substract from counter
+                                            if MATRIX[i][j].color == TEAM_ONE_COLOR:
+                                                TEAM_ONE_LEFT -= 1
+                                            elif MATRIX[i][j].color == TEAM_TWO_COLOR:
+                                                TEAM_TWO_LEFT -= 1
 
-                                        # check for game end conditions
-                                        if MATRIX[i][j].color == ASSASSIN_COLOR:
-                                            not_playing_team = TEAM_ONE_COLOR if CURR_TURN == TEAM_TWO_COLOR else TEAM_TWO_COLOR
-                                            broadcast([i.conn for i in PLAYERS_LIST], DEFAULT_MSG % ('Server', 'Team ' + not_playing_team + ' won!'))
-                                            sys.exit()
-                                        elif TEAM_ONE_LEFT == 0:
-                                            broadcast([i.conn for i in PLAYERS_LIST], DEFAULT_MSG % ('Server', 'Team ' + TEAM_ONE_COLOR + ' won!'))
-                                        elif TEAM_TWO_LEFT == 0:
-                                            broadcast([i.conn for i in PLAYERS_LIST], DEFAULT_MSG % ('Server', 'Team ' + TEAM_TWO_COLOR + ' won!'))
+                                            # check for game end conditions
+                                            if MATRIX[i][j].color == ASSASSIN_COLOR:
+                                                not_playing_team = TEAM_ONE_COLOR if CURR_TURN == TEAM_TWO_COLOR else TEAM_TWO_COLOR
+                                                broadcast([i.conn for i in PLAYERS_LIST], DEFAULT_MSG % ('Server', 'Team ' + not_playing_team + ' won!'))
+                                                sys.exit()
+                                            elif TEAM_ONE_LEFT == 0:
+                                                broadcast([i.conn for i in PLAYERS_LIST], DEFAULT_MSG % ('Server', 'Team ' + TEAM_ONE_COLOR + ' won!'))
+                                            elif TEAM_TWO_LEFT == 0:
+                                                broadcast([i.conn for i in PLAYERS_LIST], DEFAULT_MSG % ('Server', 'Team ' + TEAM_TWO_COLOR + ' won!'))
 
-                                        # check for turn end
-                                        if CLUES_LEFT == 0 or MATRIX[i][j].color != CURR_TURN:
-                                            if CURR_TURN == TEAM_ONE_COLOR:
-                                                CURR_TURN = TEAM_TWO_COLOR + '_s'
-                                            else:
-                                                CURR_TURN = TEAM_ONE_COLOR + '_s'
+                                            # check for turn end
+                                            if CLUES_LEFT == 0 or MATRIX[i][j].color != CURR_TURN:
+                                                if CURR_TURN == TEAM_ONE_COLOR:
+                                                    CURR_TURN = TEAM_TWO_COLOR + '_s'
+                                                else:
+                                                    CURR_TURN = TEAM_ONE_COLOR + '_s'
 
-                                        # now, after figuring everything out, we should tell it to the clients.
-                                        guesser_msg = 'colorreveal&i=%s&j=%s&color=%s&revealer=%s&turn=%s' % (str(i), str(j), MATRIX[i][j].color, player_by_sock(sock).name, CURR_TURN)
-                                        spymaster_msg = 'colorreveal&i=%s&j=%s&color=%s&revealer=%s&turn=%s' % (str(i), str(j), HIDDEN_COLOR, player_by_sock(sock).name, CURR_TURN)
-                                        broadcast([i.conn for i in PLAYERS_LIST if i.role == 'guesser'], guesser_msg)
-                                        broadcast([i.conn for i in PLAYERS_LIST if i.role == 'spymaster'], spymaster_msg)
+                                            # now, after figuring everything out, we should tell it to the clients.
+                                            guesser_msg = 'colorreveal&i=%s&j=%s&color=%s&revealer=%s&turn=%s' % (str(i), str(j), MATRIX[i][j].color, player_by_sock(sock).name, CURR_TURN)
+                                            spymaster_msg = 'colorreveal&i=%s&j=%s&color=%s&revealer=%s&turn=%s' % (str(i), str(j), HIDDEN_COLOR, player_by_sock(sock).name, CURR_TURN)
+                                            broadcast([i.conn for i in PLAYERS_LIST if i.role == 'guesser'], guesser_msg)
+                                            broadcast([i.conn for i in PLAYERS_LIST if i.role == 'spymaster'], spymaster_msg)
                             else:
                                 # someone tried to guess when it isn't his turn
                                 broadcast([sock], DEFAULT_MSG % ('Server', 'It is not your turn now.'))

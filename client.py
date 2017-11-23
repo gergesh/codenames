@@ -24,8 +24,8 @@ if args.guesser and args.spymaster:
     print "You can't be both a spymaster and a guesser."
 
 if args.team is not None:
-    if args.team in ['1', '2']:
-        team = int(args.team)
+    if args.team in [1, 2]:
+        team = args.team
     else:
         print 'The team you have chosen is invalid. Please go for 1 or 2.'
         sys.exit()
@@ -94,7 +94,7 @@ while True:
                     j = int(find_in_data(data, 'j'))
                     col = find_in_data(data, 'color')
                     revealer = find_in_data(data, 'revealer')
-                    t = find_in_data('turn')
+                    t = find_in_data(data, 'turn')
                     turn = (t if t[-2:] != '_s' else t[:-2] + ' Spymaster').split(' ')
                     matrix[i][j].color = col
                     clear()
@@ -134,14 +134,22 @@ while True:
                     sys.stdout.write("It is now %s's turn.\n" % colored(' '.join(turn), turn[0].lower()))
                     sys.stdout.write('-> ')
                     sys.stdout.flush()
+                elif data.startswith('turnend'):
+                    turn = find_in_data(data, 'turn')
+                    prev = find_in_data(data, 'prev')
+                    print turn, prev
+                    print '{} has chosen to end their turn!'.format(colored(prev, prev.lower()))
+                    print 'It is now {}\'s turn.'.format(colored(turn[:-2], turn[:-2].lower()))
+                    sys.stdout.write('-> ')
+                    sys.stdout.flush()
 
         else:
             # user inputted something
             line = sys.stdin.readline().strip()
-            if line[0] == '/':
-                # chat message
+            if line.startswith('/'):
+                # game request
                 s.send('gamereq&req=%s' % line[1:])
             else:
-                s.send('chatmsg&msg=%s' % line)  # gamereq means this is not a chat message, but a command.
+                s.send('chatmsg&msg=%s' % line)  # chat message
             sys.stdout.write('-> ')
             sys.stdout.flush()
