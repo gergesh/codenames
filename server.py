@@ -248,8 +248,8 @@ while True:
                         if player_by_sock(sock).role == 'guesser':
                             if player_by_sock(sock).color == CURR_TURN:
                                 if req.strip() == '':
-                                    prev = CURR_TURN
                                     # wants to end his turn
+                                    prev = CURR_TURN
                                     if CURR_TURN == TEAM_ONE_COLOR:
                                         CURR_TURN = TEAM_TWO_COLOR + '_s'
                                     else:
@@ -336,7 +336,7 @@ while True:
 
 
                         else:
-                            # non-exitent role
+                            # non-existent role
                             print 'Wtf'
                             sys.exit()
                     elif data.startswith('chatmsg'):
@@ -349,11 +349,16 @@ while True:
                         sys.stdout.write('Data of unknown type received:\n%s\n' % repr(data))
                 else:
                     if sock in SOCKET_LIST:
-                        PLAYERS_LIST.remove(player_by_sock(sock))
                         SOCKET_LIST.remove(sock)
+                    if player_by_sock(sock) in PLAYERS_LIST:
+                        PLAYERS_LIST.remove(player_by_sock(sock))
                     sys.stdout.write('%s has disconnected 1\n' % sock)
             except Exception as e:
                 sys.stdout.write('%s' % e)
+                if sock in SOCKET_LIST:
+                    SOCKET_LIST.remove(sock)
+                if player_by_sock(sock) in PLAYERS_LIST:
+                    PLAYERS_LIST.remove(player_by_sock(sock))
                 sys.stdout.write('%s has disconnected 2\n' % sock)
                 continue
 
